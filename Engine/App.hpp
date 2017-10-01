@@ -147,12 +147,32 @@ class CApplication
 {
 public:
 
+	int32_t VersionOpenGLMajor, VersionOpenGLMinor;
+	std::string AdapterInfo;
+
 
 	ImFont* font;
 
 	static void error_callback(int error, const char* description)
 	{
 		fprintf(stderr, "Error %d: %s\n", error, description);
+	}
+
+	// Вернет true если ошибка
+	bool SelectVersionOpengl(int32_t versionmajor, int32_t versionminor)
+	{
+		VersionOpenGLMajor = versionmajor;
+		VersionOpenGLMinor = versionminor;
+
+		glfwWindowHint(GLFW_SAMPLES, 4);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, VersionOpenGLMajor);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, VersionOpenGLMinor);
+		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+		window = glfwCreateWindow(SizeWidth, SizeHeight, TitleApp.c_str(), NULL, NULL);
+
+		return window == NULL;
 	}
 
 	CError Init(const std::string TitleNameApplication, const  int32_t width, const int32_t height, const graphic_library_t graphic_library = graphic_library_t::opengl)
@@ -165,15 +185,9 @@ public:
 
 		setlocale(0, "RUSSIAN");
 		ImGuiIO& io = ImGui::GetIO();
-		
-	    font  =	io.Fonts->AddFontFromFileTTF(L"C:\\Windows\\Fonts\\Tahoma.ttf", 14.0f);
-		io.Fonts->Build();
 
-	/*	for (size_t i = 192; i < 255; i++)
-		{
-			font->AddRemapChar(i, 0x0410 + i);
-		}
-		io.Fonts->Build();*/
+		font = io.Fonts->AddFontFromFileTTF(L"C:\\Windows\\Fonts\\Tahoma.ttf", 14.0f);
+		io.Fonts->Build();
 
 		glfwSetErrorCallback(error_callback);
 
@@ -185,42 +199,40 @@ public:
 		if (width == 0 || width > 8128 || height == 0 || height > 8128)
 			return Result = "Error size parametr width or height";
 
-		SizeWidth  = width;
+		SizeWidth = width;
 		SizeHeight = height;
 
-		glfwWindowHint(GLFW_SAMPLES, 4);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
-		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+		if (SelectVersionOpengl(4, 5))
+			if (SelectVersionOpengl(3, 3))
+			{
+				Result.format("Failed to open GLFW window.If you have an Intel GPU, they are not %d.%d compatible.", VersionOpenGLMajor, VersionOpenGLMinor);
 
-		window = glfwCreateWindow(SizeWidth, SizeHeight, TitleApp.c_str(), NULL, NULL);
+#ifdef PLATFORM_WINDOWS
+				MessageBoxW(0L, L"Не удаётся выбрать адаптер. Версия OpenGL не доступна.", L"Ошибка!", 0);
+#endif		
+				return Result;
+			}
 
-		if (window == NULL)
-			return Result = "Failed to open GLFW window. If you have an Intel GPU, they are not 4.5 compatible.";
-	
 		glfwMakeContextCurrent(window);
+
 		glewInit() != GLEW_OK ? Result = "Failed to initialize GLEW" : Result;
 
-		int32_t major = 0;
-		int32_t minor = 0;
+		char ibuf[512];
 
-		glGetIntegerv(GL_MAJOR_VERSION, &major);
-		glGetIntegerv(GL_MINOR_VERSION, &minor);
-
-		printf("Version OpenGL: %d.%d: %s\nVendor: %s\nRender: %s\nShader version: %s\n", major, minor,
+		sprintf(ibuf, "Version OpenGL: %d.%d: %s\nVendor: %s\nRender: %s\nShader version: %s\n", VersionOpenGLMajor, VersionOpenGLMinor,
 			glGetString(GL_VERSION),
 			glGetString(GL_VENDOR),
 			glGetString(GL_RENDERER),
 			glGetString(GL_SHADING_LANGUAGE_VERSION)
 		);
 
+		AdapterInfo = ibuf;
 
 		ImGui_ImplGlfwGL3_Init(window, true);
 
 		glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 		glClearColor(0.6f, 0.6f, 0.6f, 1.0f);
-	//	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
 		glfwSetWindowUserPointer(window, this);
 		glfwSetKeyCallback(window, KeyboardHandler);
 		glfwSetMouseButtonCallback(window, MouseHandler);
@@ -229,19 +241,10 @@ public:
 		glfwSetFramebufferSizeCallback(window, FramebufferSizeHandler);
 
 		glClearDepth(1.0f);
-		
 
 		glFrontFace(GL_CW);
-		//glCullFace(GL_BACK);
-
-		// Enable depth test
 		glEnable(GL_DEPTH_TEST);
-		// Accept fragment if it closer to the camera than the former one
 		glDepthFunc(GL_LESS);
-
-		// Cull triangles which normal is not towards the camera
-		//glEnable(GL_CULL_FACE);
-
 
 		LoadData();
 
@@ -534,8 +537,9 @@ public:
 
 			if (isFPSWindow)
 			{
-				ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiSetCond_Once);
-				ImGui::SetNextWindowSize(ImVec2(300, 100), ImGuiSetCond_Once);
+				ImGui::SetNextWindowPos(ImVec2(0, 0),      ImGuiSetCond_Once);
+				ImGui::SetNextWindowSize(ImVec2(350, 250), ImGuiSetCond_Once);
+
 				ImGui::Begin("FPS/Camera information", &isFPSWindow);
 				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 	
@@ -556,7 +560,8 @@ public:
 		
 
 				ImGui::Text("R x: %.5f y: %.5f z: %.5f\n", App->r.x, App->r.y, App->r.z);
-	
+				ImGui::Text("%s", App->AdapterInfo.c_str());
+
 				ImGui::End();
 			}
 
@@ -763,8 +768,8 @@ public:
 		CPath Path;
 		CFile VertexShader, FragmentShader, ImageFile, Model;
 
-		VertexShader.OpenFile(Path.GetPathDir(L"\\..\\shader\\pos.vsh"));
-		FragmentShader.OpenFile(Path.GetPathDir(L"\\..\\shader\\pos.fsh"));
+		VertexShader.OpenFile(Path.GetPathDir(L"\\..\\shader\\%d%d0\\pos.vsh", VersionOpenGLMajor, VersionOpenGLMinor));
+		FragmentShader.OpenFile(Path.GetPathDir(L"\\..\\shader\\%d%d0\\pos.fsh", VersionOpenGLMajor, VersionOpenGLMinor));
 
 		ShaderGroup.OpenGroup(VertexShader,   shader_type_t::vertex);
 		ShaderGroup.OpenGroup(FragmentShader, shader_type_t::fragment);
@@ -774,8 +779,8 @@ public:
 		VertexShader.CloseFile();
 		FragmentShader.CloseFile();
 
-		VertexShader.OpenFile(Path.GetPathDir(L"\\..\\shader\\gridshader.vsh"));
-		FragmentShader.OpenFile(Path.GetPathDir(L"\\..\\shader\\gridshader.fsh"));
+		VertexShader.OpenFile(Path.GetPathDir(L"\\..\\shader\\%d%d0\\gridshader.vsh", VersionOpenGLMajor, VersionOpenGLMinor));
+		FragmentShader.OpenFile(Path.GetPathDir(L"\\..\\shader\\%d%d0\\gridshader.fsh", VersionOpenGLMajor, VersionOpenGLMinor));
 
 		GridShaderGroup.OpenGroup(VertexShader,   shader_type_t::vertex);
 		GridShaderGroup.OpenGroup(FragmentShader, shader_type_t::fragment);
@@ -799,7 +804,7 @@ public:
 		t.OpenTexture(Path.GetPathDir(L"\\..\\data\\null32x32.bmp"), &Mesh.Texture);
 		Mesh.Vao.Unbind();
 
-		VertexShader.OpenFile(Path.GetPathDir(L"\\..\\shader\\pos.vsh"));
+		VertexShader.OpenFile(Path.GetPathDir(L"\\..\\shader\\%d%d0\\pos.vsh", VersionOpenGLMajor, VersionOpenGLMinor));
 		Shader.Open(VertexShader, shader_type_t::vertex);
 		VertexShader.CloseFile();
 
