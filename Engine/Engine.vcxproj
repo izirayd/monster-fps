@@ -102,28 +102,12 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <PrecompiledHeaderOutputFile>../../$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
-      <AssemblerListingLocation>../../$(IntDir)</AssemblerListingLocation>
-      <ObjectFileName>../../$(IntDir)</ObjectFileName>
-      <ProgramDataBaseFileName>../../$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
-      <XMLDocumentationFileName>../../$(IntDir)</XMLDocumentationFileName>
-      <BrowseInformationFile>../../$(IntDir)</BrowseInformationFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <AdditionalDependencies>opengl32.lib;gdi32.lib;Glu32.lib;assimp-vc140-mt.lib;DevIL.lib;glew32.lib;glfw3.lib;ILU.lib;ILUT.lib;zlibstaticd.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libcpmtd.lib. msvcprtd.lib</IgnoreSpecificDefaultLibraries>
-      <ManifestFile>../../$(IntDir)$(TargetName)$(TargetExt).intermediate.manifest</ManifestFile>
     </Link>
-    <BuildLog>
-      <Path>../../$(IntDir)$(MSBuildProjectName).log</Path>
-    </BuildLog>
-    <Manifest>
-      <OutputManifestFile>../../$(IntDir)$(TargetName)$(TargetExt).embed.manifest</OutputManifestFile>
-    </Manifest>
-    <ManifestResourceCompile>
-      <ResourceOutputFileName>../../$(IntDir)$(TargetName)$(TargetExt).embed.manifest.res</ResourceOutputFileName>
-    </ManifestResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>

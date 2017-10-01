@@ -102,13 +102,13 @@
     <ClInclude Include="picking.hpp">
       <Filter>until</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\lib\imgui-master\imconfig.h">
+      <Filter>gui\imgui</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\lib\imgui-master\imgui.h">
       <Filter>gui\imgui</Filter>
     </ClInclude>
     <ClInclude Include="..\..\lib\imgui-master\imgui_internal.h">
-      <Filter>gui\imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\lib\imgui-master\imconfig.h">
       <Filter>gui\imgui</Filter>
     </ClInclude>
   </ItemGroup>
