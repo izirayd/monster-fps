@@ -25,6 +25,16 @@
 #define CountMesh 32
 
 
+class select_t
+{
+   public:
+	   CMesh *SelectMesh = NULL;
+	   bool isSelect = false;
+	   vec2 select_mouse_pos;
+	   // свойства для страдания хуйнёй :D
+};
+
+
 CGroupMesh *EditModel;
 
 class CRender
@@ -48,6 +58,7 @@ class CRender
 	  {
 		  ListGroupMesh.clear();
 		  ListGroupMesh.resize(0);
+		  std::clear(ListGroupMesh);
 	  }
 };
 
@@ -56,6 +67,20 @@ class CWorldModel
 {
 public:
 	std::vector<CRender> GroupModelsGroup;
+
+	 bool GetMesh(CMesh * &Mesh, const std::string &name) {
+
+		 for (size_t i = 0; i < GroupModelsGroup.size(); i++)
+			 for (size_t w = 0; w < GroupModelsGroup[i].ListGroupMesh.size(); w++)		 
+				 for (size_t k = 0; k < GroupModelsGroup[i].ListGroupMesh[w].ListMesh.size(); k++)			 
+					 if (GroupModelsGroup[i].ListGroupMesh[w].ListMesh[k].name == name)
+					 {
+						 Mesh = &GroupModelsGroup[i].ListGroupMesh[w].ListMesh[k];						
+						 return true;
+					 }
+				 
+		return false;
+	}
 
 	template <typename T>
 	inline CWorldModel operator=(T m) { Add(m); return *this; }
@@ -320,7 +345,12 @@ public:
 
 	void SelectSystem(bool isPressLeft = false)
 	{
-		if (isPressLeft) {
+		// Офним функцию выделения, если используется гуи
+		ImGuiIO& io = ImGui::GetIO();
+		if (io.WantCaptureMouse)
+			return;
+
+		/*if (isPressLeft) {
 
 			RayEye(r, mousePos, vec2(SizeWidth, SizeHeight), camera);
 
@@ -334,21 +364,34 @@ public:
 				StartSelectPosition = r;
 			}
 
+		
+
 			EndSelectPosition = r;
 
 			vec3 pos_line_start = camera.position + StartSelectPosition;
 			vec3 pos_end        = camera.position + EndSelectPosition;
-			//vec3 pos_line_end(pos_line_start.x, pos_end.y, pos_end.z);
+			vec3 pos_line_end, pos_line_end1, pos_line_end2;
+
+			pos_line_end = pos_line_start + pos_end;
+			pos_line_end /= 2;
+
+		
+
 	
 			MultiSelectRectangle[0].Start();
 			MultiSelectRectangle[0].AddVertex(pos_line_start, vec2(), vec3(), vec3(1.0f, 0, 0));
-			MultiSelectRectangle[0].AddVertex(pos_end, vec2(), vec3(), vec3(1.0f, 0, 0));
+			MultiSelectRectangle[0].AddVertex(pos_line_end, vec2(), vec3(), vec3(1.0f, 0, 0));
 			MultiSelectRectangle[0].End();
 
-			//MultiSelectRectangle[1].Start();
-		///	MultiSelectRectangle[1].AddVertex(pos_line_start, vec2(), vec3(), vec3(1.0f, 0, 0));
-			//MultiSelectRectangle[1].AddVertex(pos_line, vec2(), vec3(), vec3(1.0f, 0, 0));
-			//MultiSelectRectangle[1].End();
+			MultiSelectRectangle[1].Start();
+			MultiSelectRectangle[1].AddVertex(pos_line_start, vec2(), vec3(), vec3(1.0f, 0, 0));
+			MultiSelectRectangle[1].AddVertex(pos_line_end1, vec2(), vec3(), vec3(1.0f, 0, 0));
+			MultiSelectRectangle[1].End();
+
+			MultiSelectRectangle[2].Start();
+			MultiSelectRectangle[2].AddVertex(pos_line_start, vec2(), vec3(), vec3(1.0f, 0, 0));
+			MultiSelectRectangle[2].AddVertex(pos_line_end2, vec2(), vec3(), vec3(1.0f, 0, 0));
+			MultiSelectRectangle[2].End();
 
 			isSelectObj = true;
 		}
@@ -359,28 +402,42 @@ public:
 			MultiSelectRectangle[1].DisableRender();
 			MultiSelectRectangle[2].DisableRender();
 			MultiSelectRectangle[3].DisableRender();
-		}
+		}*/
 
-		GetRayScreen2(ray, mousePos, vec2(SizeWidth, SizeHeight), camera);
+		if (isPressLeft) {
 
-		for (auto &wit : WorldModel.GroupModelsGroup)
-			for (auto &git : wit.ListGroupMesh)
-			{
-				bool isSelect = false;
-				for (auto &lit : git.ListMesh)			
-				  if (!lit.isRender) 
-						 break;
-					else 
-					{
-						if (!isSelect)
-							if (TestRayOBBIntersection(ray.start, ray.end, aabb_min, aabb_max, lit.Model, intersection_distance)) {
-								isSelect = true;
-								intersection_distance = 0;
+			GetRayScreen2(ray, mousePos, vec2(SizeWidth, SizeHeight), camera);
+
+			for (auto &wit : WorldModel.GroupModelsGroup)
+				for (auto &git : wit.ListGroupMesh)
+				{
+					bool isSelect = false;
+					for (auto &lit : git.ListMesh)
+						if (!lit.isRender)
+							break;
+						else
+						{
+							if (!isSelect)
+								if (TestRayOBBIntersection(ray.start, ray.end, aabb_min, aabb_max, lit.Model, intersection_distance)) {
+									isSelect = true;
+									intersection_distance = 0;
+								}
+
+							if (isSelect)
+							{
+								select_scene.SelectMesh = &lit;
+								select_scene.isSelect = true;
+								select_scene.select_mouse_pos = this->mousePos;
+								return;
 							}
 
-						isSelect ? lit.Color = { 1.0, 0, 0 } : lit.Color = { 1.0, 1.0, 0 };
-					}
-			}
+							//isSelect ? lit.Color = { 1.0, 0, 0 } : lit.Color = { 1.0, 1.0, 0 };
+						}
+				}
+
+			//select_scene.SelectMesh = NULL;
+			//select_scene.isSelect = false;
+		}
 	}
 
 	static void KeyboardHandler(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -468,7 +525,7 @@ public:
 	class CGUIManager
 	{
 	public:
-
+		bool isProperty  = true;
 		bool isFPSWindow = true;
 		bool isObjScene  = true;
 		bool isSettingsGraphics = true;
@@ -488,6 +545,8 @@ public:
 		bool isGL_LESS      = true;
 		bool isGL_CULL_FACE = false;
 		vec3 tmp;
+
+
 
 		void Scene()
 		{
@@ -563,6 +622,104 @@ public:
 				ImGui::Text("%s", App->AdapterInfo.c_str());
 
 				ImGui::End();
+			}
+
+			if (isProperty)
+			{
+				if (App->select_scene.isSelect && App->select_scene.SelectMesh) {
+
+					ImGui::SetNextWindowPos(ImVec2(App->select_scene.select_mouse_pos.x, App->select_scene.select_mouse_pos.y),  ImGuiSetCond_Once);
+					ImGui::SetNextWindowSize(ImVec2(210, 350), ImGuiSetCond_Once);
+
+					CMesh *Mesh = App->select_scene.SelectMesh;
+
+					ImGui::Begin("Property", &App->select_scene.isSelect);
+
+					ImGui::Text("Name: %s", Mesh->name.c_str());
+					ImGui::Text("Position object");
+					ImGui::Separator();
+					vec3 pos = Mesh->GetPosition();
+
+					ImGui::PushItemWidth(190);	
+					ImGui::Text("x"); ImGui::SameLine();  ImGui::SliderFloat("##x", &pos.x, 0.0f, 512.0f, "x = %.3f");
+					ImGui::Text("y"); ImGui::SameLine();  ImGui::SliderFloat("##y", &pos.y, 0.0f, 512.0f, "y = %.3f");
+					ImGui::Text("z"); ImGui::SameLine();  ImGui::SliderFloat("##z", &pos.z, 0.0f, 512.0f, "z = %.3f");
+					ImGui::PopItemWidth();
+
+
+					ImGui::Separator();
+
+					ImGui::Columns(5, "pos_color");
+					ImGui::Separator();
+
+					ImGui::PushID("position_id");
+
+					int32_t index = 0;
+
+					ImGui::NextColumn();
+					  ImGui::Text("x");    ImGui::NextColumn();
+					  ImGui::Text("y");    ImGui::NextColumn();
+					  ImGui::Text("z");    ImGui::NextColumn();
+					  ImGui::NextColumn();
+					  ImGui::NextColumn();
+
+					  ImGui::Separator();
+					
+
+					  ImGui::PushID(index);
+
+					  ImGui::PushStyleColor(ImGuiCol_FrameBg, ImColor::HSV(index / 7.0f, 0.5f, 0.5f));
+					  ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImColor::HSV(index / 7.0f, 0.6f, 0.5f));
+					  ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImColor::HSV(index / 7.0f, 0.7f, 0.5f));
+					  ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImColor::HSV(index / 7.0f, 0.9f, 0.9f));
+					  ImGui::VSliderFloat("##v", ImVec2(18, 160), &pos.x, 0.0f, 256.0f, "");
+					  if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+						  ImGui::SetTooltip("%.3f", pos.x);
+					  ImGui::PopStyleColor(4);
+
+					  ImGui::PopID();
+
+					  ImGui::NextColumn();
+					
+					  index++;
+					  ImGui::PushID(index);
+
+					  ImGui::PushStyleColor(ImGuiCol_FrameBg, ImColor::HSV(index / 7.0f, 0.5f, 0.5f));
+					  ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImColor::HSV(index / 7.0f, 0.6f, 0.5f));
+					  ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImColor::HSV(index / 7.0f, 0.7f, 0.5f));
+					  ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImColor::HSV(index / 7.0f, 0.9f, 0.9f));
+					  ImGui::VSliderFloat("##v", ImVec2(18, 160), &pos.y, 0.0f, 256.0f, "");
+					  if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+						  ImGui::SetTooltip("%.3f", pos.y);
+					  ImGui::PopStyleColor(4);
+
+					  ImGui::PopID();
+				
+					  ImGui::NextColumn();
+					
+					  index++;
+					  ImGui::PushID(index);
+
+					  ImGui::PushStyleColor(ImGuiCol_FrameBg, ImColor::HSV(index / 7.0f, 0.5f, 0.5f));
+					  ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImColor::HSV(index / 7.0f, 0.6f, 0.5f));
+					  ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImColor::HSV(index / 7.0f, 0.7f, 0.5f));
+					  ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImColor::HSV(index / 7.0f, 0.9f, 0.9f));
+					  ImGui::VSliderFloat("##v", ImVec2(18, 160), &pos.z, 0.0f, 256.0f, "");
+					  if (ImGui::IsItemActive() || ImGui::IsItemHovered())
+						  ImGui::SetTooltip("%.3f", pos.z);
+					  ImGui::PopStyleColor(4);
+
+					  ImGui::PopID();
+							
+					ImGui::PopID();
+
+					ImGui::Separator();
+
+					if (pos != Mesh->GetPosition())
+						Mesh->SetPosition(pos);
+
+					ImGui::End();
+				}
 			}
 
 		if (isObjScene)
@@ -683,7 +840,6 @@ public:
 
 	void LoadData()
 	{
-
 		camera.movespeed = 7.5f;
 
 		camera.SetPerspective(70, (float)SizeWidth / (float)SizeHeight, 0.1f, 256000.f);
@@ -823,8 +979,6 @@ public:
 		Line.EndVertex();
 		Line.Vao.Unbind();
 
-	
-
 		Grid.Vao.Bind();
 		Grid.StartVertex();
 
@@ -865,6 +1019,21 @@ public:
 			WorldModel.AddGroup(GlobalRender);
 		}
 
+	
+		CMesh Plain = { camera, plain_t({1, 10, 10, {0.8,0.8,0.8}}), "plain", true };
+
+		//Plain.ConvertInPlane(1, 10, 10);
+
+		Plain.SetPosition({10, 0, 10});
+		Plain.SetRotation(270, { 1, 1 ,1 });
+	    
+
+		m_Model.Clear();
+		GlobalRender.Clear();
+	
+		m_Model.AddMesh(Plain);
+		GlobalRender.Add(m_Model);
+		WorldModel.AddGroup(GlobalRender);
 	}
 
 	CDrawMesh DrawMesh;
@@ -884,6 +1053,8 @@ public:
 	CShader ShaderGroup;
 	CShader GridShaderGroup;
 
+	select_t select_scene;
+
 	struct grid_t
 	{
 		int32_t Size = 256;
@@ -898,7 +1069,20 @@ public:
 
 	engine::camera camera;
 
-	
+	// Описываются различные события, движение и прочее, требующее анимации
+	void Process(float deltaTime)
+	{		
+			
+		CMesh *Plain = 0;
+		if (WorldModel.GetMesh(Plain, "plain") && Plain)
+		{
+			Plain->SetRotation(0.5f , { 1.f, 0.0f, 0 });
+		}
+		
+		
+	}
+
+	// Прорисовка объектов мира
 	CError Draw()
 	{
 		CError Result;
@@ -949,6 +1133,7 @@ public:
 				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		
 			Result = Draw();
+			Process(frameTimer);
 
 			if (isWireframe)
 				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

@@ -160,6 +160,7 @@ class CDrawMesh
 {
 public:
 
+
 	uint32_t count = 0;
 	int32_t  typeBuffer = GL_ARRAY_BUFFER;
 
@@ -407,9 +408,27 @@ public:
 };
 
 
+struct plain_t
+{
+	plain_t(float size, uint32_t size_x, uint32_t size_y, const vec3 &color)
+	{
+		_s  = size;
+		_sx = size_x;
+		_sy = size_y;
+		c   = color;
+	}
+
+	float _s;
+	uint32_t _sx;
+	uint32_t _sy;
+	vec3    c;
+};
+
 class CMesh
 {
 public:
+	std::string name;
+
 	uint32_t  index;
 	uint32_t  textureindexmesh;
 	CTexture  Texture;
@@ -438,13 +457,14 @@ public:
 	CVAOManager Vao;
 
 
-	~CMesh()
-	{
-
-	}
-
-	CMesh() {
-
+	~CMesh(){}
+	CMesh() {}
+	CMesh(const bool &_isRender) { isRender = _isRender; }
+	CMesh(const std::string &name) { this->name = name; }
+	CMesh(const int32_t m_RenderType, bool render = true) { isRender = render;	RenderType = m_RenderType; }
+	CMesh(engine::camera &c ,const std::string &name = "", const bool &_isRender = true) { Camera = &c; this->name = name; isRender = _isRender;}
+	CMesh(engine::camera &c, const plain_t &p, std::string name = "", const bool &_isRender = true) {
+		Camera = &c; this->name = name; isRender = _isRender; ConvertInPlane(p._s, p._sx, p._sy, p.c);
 	}
 
 	// Удаляет объект из памяти GPU
@@ -454,16 +474,6 @@ public:
 		BaseIndex.Delete();
 		Vao.Delete();
 
-	}
-
-	CMesh(const int32_t m_RenderType)	{	
-
-		RenderType = m_RenderType;	
-	}
-
-	CMesh(const int32_t m_RenderType, bool render) {
-		isRender = render;
-		RenderType = m_RenderType;
 	}
 
 	void Start() {
@@ -485,16 +495,22 @@ public:
 
 	vec3 VectorMove;
 
-	private:
 
+
+
+private:
+
+	// Учтите, они не зря приватные, это сделано для обновления матрицы модели, так в методах Set.. она обновляется, если же обращаться на прямую
+	// к данным объектам, то выйдет фиаско и свойства объектов на сцене не изменится
 	vec3 Position = { 0.0, 0.0, 0.0 };
 	vec3 Scale    = { 1.0, 1.0, 1.0 };
 	quat Rotation; 
 
-    public:
+public:
 	inline vec3 GetPosition() const { return Position; }
 	inline quat GetRotation() const { return Rotation; }
 	inline vec3 GetScale()    const { return Scale;    }
+
 
 	void ApplyPosition(vec3 pos)   {	SetPosition(GetPosition() + pos);}
 
@@ -502,7 +518,12 @@ public:
 		Model = glm::translate(mat4(), GetPosition()) * glm::mat4_cast(GetRotation()) *	glm::scale(glm::mat4(), GetScale());
 	}
 
-	inline void SetRotatation(quat newRotation) {
+	inline void SetRotation(const float& angle, const vec3 &axis)
+	{
+		SetRotation(rotate(Rotation, angle, axis));
+	}
+
+	inline void SetRotation(quat newRotation) {
 		Rotation = newRotation;
 		BuildMatrixModel();
 	}
@@ -847,40 +868,18 @@ public:
 
 	void ConvertInPlane(const float size, const uint32_t size_x, const uint32_t size_z, vec3 color = vec3())
 	{
-		delete_allocate_in_gpu();
-		Vao.Bind();
-
-		StartVertex();
-
-		printf("======\n");
-
+	
+		Start();
 
 		for (float pos_z = 0; pos_z <= size_z; pos_z++)
-			for (float pos_x = 0; pos_x <= size_x; pos_x++) {
-				//color.x = 1.0f / ((rand() % 5) + 1);
-				//color.y = color.x;
-				//color.z = color.x;
+			for (float pos_x = 0; pos_x <= size_x; pos_x++) 
 				//AddVertex(vec3(pos_x * size, color.x * size, pos_z * size), vec2(), vec3(), color);
 				AddVertex(vec3(pos_x * size, 0, pos_z * size), vec2(), vec3(), color);
-				//printf("%f %f %f %f %f\n", pos_x * size, 0, pos_z * size, pos_x, pos_z);
-			}
-		printf("======\n");
-
+		
 		BufferVertex[GetIndex(0, 0, size_x)].texture = vec2(0.0f, 0.0f);
 		BufferVertex[GetIndex(size_x, 0, size_x)].texture = vec2(1.0f, 0.0f);
 		BufferVertex[GetIndex(0, size_z, size_x)].texture = vec2(0.0f, 1.0f);
 		BufferVertex[GetIndex(size_x, size_z, size_x)].texture = vec2(1.0f, 1.0f);
-
-		/*BufferVertex[GetIndex(0, 0, size_x)].texture = vec2(0.0f, 0.0f);
-		BufferVertex[GetIndex(1, 0, size_x)].texture = vec2(1.0f, 0.0f);
-		BufferVertex[GetIndex(0, 1, size_x)].texture = vec2(0.0f, 1.0f);
-		BufferVertex[GetIndex(1, 1, size_x)].texture = vec2(1.0f, 1.0f);*/
-
-
-	//	BufferVertex[GetIndex(2, 3, size_x)].position.y = 1;
-	//	BufferVertex[GetIndex(3, 3, size_x)].position.y = 1;
-
-		EndVertex();
 
 		StartIndices();
 		register uint32_t index1, index2, index3, index4;
@@ -900,9 +899,9 @@ public:
 				AddIndices(index4);
 				AddIndices(index3);
 			}
-		EndIndices();
 
-		Vao.Unbind();
+		EndIndices();
+		End();
 	}
 
 
